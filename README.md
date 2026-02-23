@@ -24,7 +24,7 @@ Once installed, Claude Code can:
 Clone this repo and copy the skill folder into your Claude Code skills directory:
 
 ```bash
-git clone https://github.com/anthropics/indexing-co-pipeline-skill.git
+git clone https://github.com/indexing-co/indexing-co-pipeline-skill.git
 cp -r indexing-co-pipeline-skill/skills/indexing-co-pipelines ~/.claude/skills/
 ```
 
