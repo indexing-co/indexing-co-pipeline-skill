@@ -250,18 +250,51 @@ curl 'https://app.indexing.co/dw/pipelines/' \
 | `/pipelines/{name}/networks`      | `DELETE` | Disable networks         |
 | `/pipelines/{name}/backfill`      | `POST`   | Backfill historical data |
 
+### Updating a Pipeline
+
+There is no PATCH/PUT endpoint for pipelines. To change the destination, delivery config, or any pipeline setting:
+
+1. **Delete** the existing pipeline: `DELETE /pipelines/{name}`
+2. **Recreate** it with the new config: `POST /pipelines`
+
+Updating a **transformation** is simpler — just re-POST to `/transformations/{name}` with the new code. The live pipeline picks up the new transformation automatically without needing to be recreated.
+
+Updating a **filter** is also in-place — POST new values to `/filters/{name}`.
+
 ---
 
 ## Backfill Historical Data
 
-After deploying a pipeline, backfill past blocks:
+After deploying a pipeline, backfill past blocks. The backfill API requires `network`, `value` (the filter address), and either `beats` (array of specific block numbers) or `beatStart`/`beatEnd` (block range).
+
+**Specific blocks:**
 
 ```bash
 curl -X POST 'https://app.indexing.co/dw/pipelines/{NAME}/backfill' \
   -H 'X-API-KEY: $API_KEY' \
   -H 'Content-Type: application/json' \
-  -d '{"network": "ethereum", "fromBlock": 18000000}'
+  -d '{
+    "network": "ethereum",
+    "value": "0xYOUR_FILTER_ADDRESS",
+    "beats": [24519100, 24519200, 24519300]
+  }'
 ```
+
+**Block range:**
+
+```bash
+curl -X POST 'https://app.indexing.co/dw/pipelines/{NAME}/backfill' \
+  -H 'X-API-KEY: $API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "network": "ethereum",
+    "value": "0xYOUR_FILTER_ADDRESS",
+    "beatStart": 18000000,
+    "beatEnd": 18001000
+  }'
+```
+
+> **Note:** `value` must match an address in your filter. Without it, the API returns `"must provide beats or value"`.
 
 ---
 
@@ -279,6 +312,27 @@ Network status: `https://jiti.indexing.co/status/{NETWORK_KEY}`
 
 ---
 
+## Post-Deploy Verification
+
+**A successful transformation test does NOT guarantee live delivery.** The test endpoint runs your code against a block and returns results directly. The live pipeline has additional layers (filter matching, delivery adapter, network connectivity) that can silently fail.
+
+After deploying, always verify end-to-end:
+
+1. **Confirm pipeline state**: `GET /pipelines/{name}` — check `enabled: true` and correct `networks`
+2. **Trigger a backfill** of a known block (one that returned data in your transformation test)
+3. **Check the destination** — did data actually arrive?
+4. **If no data arrives**, debug layer by layer:
+   - Test the destination directly (e.g., `curl -X POST` to your webhook) — is it reachable and returning 200?
+   - Simplify the transformation (remove all filtering logic) and backfill again — does unfiltered data arrive?
+   - If unfiltered data doesn't arrive either, the issue is at the pipeline/delivery layer, not the transformation
+   - Contact Indexing Co support at **hello@indexing.co** — there are no delivery logs exposed via the API
+
+### Debugging Webhook Delivery
+
+Use [webhook.site](https://webhook.site) for testing — it shows incoming requests in real-time. First verify the URL works with a direct `curl POST`, then trigger a backfill. If your manual curl arrives but pipeline data doesn't, the issue is on the Indexing Co delivery side.
+
+---
+
 ## Workflow Checklist
 
 When a user asks to set up a pipeline, walk through:
@@ -291,7 +345,8 @@ When a user asks to set up a pipeline, walk through:
 6. **Create destination table** (SQL schema from test output)
 7. **Register transformation**
 8. **Deploy pipeline**
-9. **Backfill** if historical data needed
+9. **Verify delivery** — backfill a known block and confirm data arrives at destination
+10. **Backfill** historical data if needed
 
 ---
 
@@ -320,6 +375,34 @@ When a user asks to set up a pipeline, walk through:
 // Filter: token contract address
 // Signature:
 'event Transfer(address indexed from, address indexed to, uint256 value)'
+```
+
+### ERC-20 Transfers Filtered by Protocol
+
+When a user wants token transfers "through" a specific protocol (e.g., "USDC transfers through Aave"), the filter still targets the **token contract** (since Transfer events are emitted by the token). The protocol filtering happens inside the **transformation** by checking if `from` or `to` matches a protocol address.
+
+**Key insight:** Tokens don't flow to/from the protocol's main contract — they flow to/from the protocol's **vault or token-holding contract**. For example:
+- Aave: USDC flows to/from the **aToken contract** (aUSDC), not the Pool contract
+- Compound: tokens flow to/from the **cToken contract** (cUSDC)
+- Uniswap: tokens flow to/from the **pool pair contract**
+
+**You must research the correct addresses.** Use WebSearch to find the actual token-holding contract addresses for the protocol. Verify with the user — suggest they can also check with [Perplexity AI](https://perplexity.ai) for quick contract address lookups.
+
+```javascript
+// Example: USDC transfers through Aave on Ethereum
+// Filter: USDC contract (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+// Transformation filters by Aave addresses:
+const protocolContracts = new Set([
+  '0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c', // Aave V3 aEthUSDC
+  '0xbcca60bb61934080951369a648fb03df4f96263c', // Aave V2 aUSDC
+  '0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2', // Aave V3 Pool
+  '0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9', // Aave V2 LendingPool
+]);
+
+// Inside transform loop, after decoding:
+const from = decoded.decoded.from?.toLowerCase();
+const to = decoded.decoded.to?.toLowerCase();
+if (!protocolContracts.has(from) && !protocolContracts.has(to)) continue;
 ```
 
 ### Universal Token Transfers
