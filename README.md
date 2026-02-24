@@ -12,7 +12,7 @@ Once installed, Claude Code can:
 - **Write transformation functions** — JavaScript that reshapes raw block data into structured output
 - **Generate SQL schemas** — table definitions that match your pipeline output
 - **Deploy and manage pipelines** — create, test, backfill, and monitor via the Indexing Co API
-- **Handle 150+ networks** — EVM, Solana, Aptos, Bitcoin, Cosmos, and more
+- **Handle 100+ networks** — EVM, Solana, Aptos, Bitcoin, Cosmos, and more
 
 ## Prerequisites
 
