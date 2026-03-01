@@ -248,6 +248,20 @@ Stream live pipeline events directly into a Claude Code session via the Indexing
 | `clear_events` | Delete stored events (all or by channel). |
 | `get_status` | WebSocket state, channels, event counts, DB path. |
 
+**Live Preview CLI:**
+
+Stream events to the terminal with colorized, formatted output — useful for visually inspecting what a pipeline is producing in real-time.
+
+```bash
+node ~/workspace/indexing-co/indexing-co-mcp/dist/cli/preview.js <channel>
+```
+
+- Run as a background process (`run_in_background: true`) so you can trigger backfills or wait for live data
+- Shows a banner with channel name, connection status, then renders each event with aligned key-value pairs
+- Addresses in magenta, tx hashes in blue, numbers in yellow, booleans green/red, nested objects indented
+- Ctrl+C (or `TaskStop`) prints a summary box with event count, duration, and avg rate
+- Requires `~/.indexing-co/credentials` with `API_KEY`
+
 **Example: querying streamed data with SQL:**
 
 ```sql
