@@ -9,6 +9,7 @@ Tell Claude what onchain data you need, and it will walk you through creating fi
 Once installed, Claude Code can:
 
 - **Set up data pipelines** — filter contracts, transform events, deliver to your database
+- **Stream live data into Claude Code** — real-time blockchain events via the [Indexing Co MCP server](https://github.com/indexing-co/indexing-co-mcp), queryable with SQL
 - **Write transformation functions** — JavaScript that reshapes raw block data into structured output
 - **Generate SQL schemas** — table definitions that match your pipeline output
 - **Deploy and manage pipelines** — create, test, backfill, and monitor via the Indexing Co API
@@ -61,7 +62,19 @@ The skill teaches Claude Code about the Indexing Co pipeline API:
 
 ## Supported destinations
 
-PostgreSQL, Webhooks (HTTP), WebSocket, Kafka, Kinesis, Pulsar, GCP PubSub, AWS S3, GCS, MongoDB, BigQuery, Firestore, Neo4j, ArangoDB, MySQL, SQLite
+PostgreSQL, Webhooks (HTTP), WebSocket, DIRECT (stream to Claude Code), Kafka, Kinesis, Pulsar, GCP PubSub, AWS S3, GCS, MongoDB, BigQuery, Firestore, Neo4j, ArangoDB, MySQL, SQLite
+
+## Real-time streaming with MCP
+
+Pair this skill with the [Indexing Co MCP server](https://github.com/indexing-co/indexing-co-mcp) to stream live blockchain events directly into your Claude Code session. Events are stored in local SQLite and queryable with SQL — no external database needed.
+
+```
+> Stream all USDC transfers on Base into this session
+
+> What are the largest transfers in the last 5 minutes?
+
+> Show me which addresses are sending the most USDC
+```
 
 ## Links
 

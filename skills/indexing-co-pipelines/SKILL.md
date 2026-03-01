@@ -212,6 +212,55 @@ CREATE TABLE events (
 }
 ```
 
+### DIRECT (Stream to Claude Code)
+
+Stream live pipeline events directly into a Claude Code session via the Indexing Co MCP server. Events flow over WebSockets and are stored in local SQLite for querying.
+
+```json
+{
+  "adapter": "DIRECT",
+  "connectionUri": "my-channel-name",
+  "table": "my-channel-name"
+}
+```
+
+- `connectionUri` = channel name (what you `subscribe` to in the MCP server)
+- `table` should match `connectionUri`
+- Events only sent when at least one subscriber is connected (saves cost)
+- Can run alongside any other adapter (e.g., DIRECT + POSTGRES)
+
+**Stream to Claude Code workflow:**
+1. Create filter + transformation (same as any pipeline)
+2. Deploy pipeline with DIRECT adapter, `table` = channel name
+3. In Claude Code: use `subscribe` tool to connect to the channel
+4. Use `describe_data` to see what's arriving, then `query` with SQL to analyze
+
+**MCP Server tools available after subscribing:**
+
+| Tool | Description |
+|------|-------------|
+| `subscribe` | Subscribe to a channel. Events start flowing into SQLite. |
+| `unsubscribe` | Stop receiving events for a channel. |
+| `get_subscriptions` | List active channels, connection status, event counts. |
+| `get_events` | Get recent raw events as JSON. |
+| `describe_data` | Auto-discover data shape from stored events. |
+| `query` | Run read-only SQL with `json_extract()` support. |
+| `clear_events` | Delete stored events (all or by channel). |
+| `get_status` | WebSocket state, channels, event counts, DB path. |
+
+**Example: querying streamed data with SQL:**
+
+```sql
+SELECT json_extract(data, '$.chain') as chain,
+       json_extract(data, '$.transaction_hash') as tx,
+       json_extract(data, '$.decoded.value') as amount
+FROM events
+WHERE channel = 'my-transfers'
+  AND json_extract(data, '$.chain') = 'base'
+ORDER BY received_at DESC
+LIMIT 20;
+```
+
 ### Other Adapters
 
 `Kafka`, `Kinesis`, `Pulsar`, `GCP PubSub`, `AWS S3`, `GCS`, `MongoDB`, `BigQuery`, `Firestore`, `Neo4j`, `ArangoDB`, `MySQL`, `SQLite`
