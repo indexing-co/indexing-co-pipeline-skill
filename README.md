@@ -1,3 +1,6 @@
+> **Archived 2026-09-29 — moved into [`@indexing/cli`](https://github.com/indexing-co/indexing-co-cli).**
+> Use `indexing-co skill install` (the repo is also a Claude Code plugin) from `npm i -g @indexing/cli` (0.2.0+). For Claude Code: `claude mcp add indexing-co -- npx -y @indexing/cli mcp`.
+
 # Indexing Co — Claude Code Skill
 
 A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill that helps you build and deploy blockchain data pipelines using [Indexing Co](https://indexing.co).
